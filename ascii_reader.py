@@ -1,4 +1,9 @@
 import numpy as np 
+dt = np.dtype([('x', 'f4'), ('z', 'f4')])
+
+fname1 = 'DATA/dummy.dat'
+fname2 = 'DATA/long_dummy.dat'
+fname3 = 'DATA/very_long_dummy.dat'
 
 def file_len(fname):
     """ Function computes the total number of lines in an ascii file.
@@ -58,6 +63,13 @@ def rowcut(arr):
     mask = np.where(arr['z'] > -300, True, False)
     return mask
 
+def fill_empty_array(arr, generator):
+    """
+    """
+    for idx, row in enumerate(generator):
+        arr[idx] = row
+
+
 def read_rowcut_file(fname, cut_func, dt):
     """ Read an ascii file ``fname``, apply the ``cut_func`` function object to each row 
     to determine if the row passes the cut, and store the result as a 
@@ -80,12 +92,24 @@ def read_rowcut_file(fname, cut_func, dt):
 
     with open(fname) as f:
         for ichunk in xrange(num_full_chunks):
-            chunk_array = np.array(list(column_cut_chunk_gen(chunksize, [0, 2], f)), dtype=dt)
+
+            chunk_generator = column_cut_chunk_gen(chunksize, [0, 2], f)
+            chunk_array = np.empty(chunksize, dtype=dt)
+            fill_empty_array(chunk_array, chunk_generator)
+
             mask = cut_func(chunk_array)
             try:
                 full_array = np.append(full_array, chunk_array[mask])
             except NameError:
                 full_array = chunk_array[mask]
-        chunk_array = np.array(list(column_cut_chunk_gen(chunksize_remainder, [0, 2], f)), dtype=dt)
+        # Now for the final chunk
+        chunk_generator = column_cut_chunk_gen(chunksize_remainder, [0, 2], f)
+        chunk_array = np.empty(chunksize_remainder, dtype=dt)
+        fill_empty_array(chunk_array, chunk_generator)
         full_array = np.append(full_array, chunk_array)
+
     return full_array
+
+
+
+
