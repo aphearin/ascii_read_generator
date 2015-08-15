@@ -1,9 +1,14 @@
+from cythonize_array_fill import fill_empty_array as cython_fill_empty_array
+
 import numpy as np 
 dt = np.dtype([('x', 'f4'), ('z', 'f4')])
 
 fname1 = 'DATA/dummy.dat'
 fname2 = 'DATA/long_dummy.dat'
 fname3 = 'DATA/very_long_dummy.dat'
+
+# %timeit ascii_reader.read_rowcut_file(ascii_reader.fname2, ascii_reader.rowcut, ascii_reader.dt)
+   
 
 def file_len(fname):
     """ Function computes the total number of lines in an ascii file.
@@ -63,14 +68,14 @@ def rowcut(arr):
     mask = np.where(arr['z'] > -300, True, False)
     return mask
 
-def fill_empty_array(arr, generator):
+def python_fill_empty_array(arr, generator):
     """
     """
     for idx, row in enumerate(generator):
         arr[idx] = row
 
 
-def read_rowcut_file(fname, cut_func, dt):
+def read_rowcut_file(fname, cut_func, dt, use_cython=False):
     """ Read an ascii file ``fname``, apply the ``cut_func`` function object to each row 
     to determine if the row passes the cut, and store the result as a 
     numpy structured array with dtype ``dt``.
@@ -95,7 +100,10 @@ def read_rowcut_file(fname, cut_func, dt):
 
             chunk_generator = column_cut_chunk_gen(chunksize, [0, 2], f)
             chunk_array = np.empty(chunksize, dtype=dt)
-            fill_empty_array(chunk_array, chunk_generator)
+            if use_cython is True:
+                cython_fill_empty_array(chunk_array, chunk_generator)
+            else:
+                python_fill_empty_array(chunk_array, chunk_generator)
 
             mask = cut_func(chunk_array)
             try:
@@ -105,7 +113,10 @@ def read_rowcut_file(fname, cut_func, dt):
         # Now for the final chunk
         chunk_generator = column_cut_chunk_gen(chunksize_remainder, [0, 2], f)
         chunk_array = np.empty(chunksize_remainder, dtype=dt)
-        fill_empty_array(chunk_array, chunk_generator)
+        if use_cython is True:
+            cython_fill_empty_array(chunk_array, chunk_generator)
+        else:
+            python_fill_empty_array(chunk_array, chunk_generator)
         full_array = np.append(full_array, chunk_array)
 
     return full_array
